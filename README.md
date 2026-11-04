@@ -1,6 +1,6 @@
 # Notebook LLM
 
-A Python application for uploading PDF documents and asking questions about their content.
+A Python application for uploading PDF documents and preparing their contents for document-based question answering.
 
 ## Tech stack
 
@@ -14,10 +14,12 @@ A Python application for uploading PDF documents and asking questions about thei
 
 ## Current features
 
-- PDF upload interface
-- File name and size display
+- PDF upload interface with file metadata
+- PDF text extraction and preview
+- Overlapping text chunks for downstream retrieval
+- Input validation and automated chunking tests
 
-Document parsing, semantic search, and question answering are under development.
+Semantic search and question answering are under development.
 
 ## Setup
 
@@ -25,6 +27,12 @@ Document parsing, semantic search, and question answering are under development.
 python -m venv .venv
 pip install -r requirements.txt
 streamlit run app.py
+```
+
+## Run tests
+
+```bash
+python -m unittest discover -s tests -v
 ```
 
 Never commit API keys or local secrets.
