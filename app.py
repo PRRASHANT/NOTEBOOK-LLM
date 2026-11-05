@@ -1,14 +1,23 @@
 """Streamlit interface for uploading and preparing PDF documents."""
 
 import streamlit as st
+from langchain_huggingface import HuggingFaceEmbeddings
 from pypdf.errors import PdfReadError
 
+from embedding_utils import MODEL_NAME, embed_chunks
 from pdf_utils import extract_pdf_text
 from text_utils import chunk_text
 
+
+@st.cache_resource(show_spinner=False)
+def get_embedding_model():
+    """Reuse the embedding model across Streamlit reruns."""
+    return HuggingFaceEmbeddings(model_name=MODEL_NAME)
+
+
 st.set_page_config(page_title="Notebook LLM", page_icon="📚")
 st.title("📚 Notebook LLM")
-st.write("Upload a PDF to extract and prepare its text.")
+st.write("Upload a PDF to extract its text and generate embeddings.")
 
 uploaded_file = st.file_uploader("Choose a PDF", type=["pdf"])
 
@@ -32,6 +41,18 @@ if uploaded_file is not None:
                     st.caption("Showing the first 5,000 characters of extracted text.")
                 with st.expander("Preview first text chunk"):
                     st.text(chunks[0])
+
+                with st.spinner("Generating document embeddings..."):
+                    try:
+                        vectors = embed_chunks(chunks, get_embedding_model())
+                    except Exception:
+                        st.error(
+                            "Could not generate embeddings. Check model dependencies "
+                            "and internet access, then try again."
+                        )
+                    else:
+                        st.success(f"Created {len(vectors):,} embedding vectors.")
+                        st.write(f"Vector dimensions: {len(vectors[0]):,}")
             else:
                 st.warning("No selectable text found. Scanned PDFs may require OCR.")
 else:
