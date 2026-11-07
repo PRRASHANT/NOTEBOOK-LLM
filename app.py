@@ -1,11 +1,14 @@
-"""Streamlit interface for PDF processing and semantic passage search."""
+"""Streamlit interface for document retrieval and grounded question answering."""
 
+import os
 from hashlib import sha256
 
 import streamlit as st
+from langchain_groq import ChatGroq
 from langchain_huggingface import HuggingFaceEmbeddings
 from pypdf.errors import PdfReadError
 
+from answer_utils import answer_question
 from embedding_utils import MODEL_NAME, embed_chunks
 from pdf_utils import extract_pdf_text
 from search_utils import build_search_index, search_chunks
@@ -18,14 +21,33 @@ def get_embedding_model():
     return HuggingFaceEmbeddings(model_name=MODEL_NAME)
 
 
+@st.cache_resource(show_spinner=False)
+def get_answer_model(api_key: str):
+    """Reuse the Groq chat model without storing credentials in source code."""
+    return ChatGroq(model="openai/gpt-oss-20b", api_key=api_key, temperature=0)
+
+
+def get_api_key():
+    """Read credentials from the environment or Streamlit secrets."""
+    key = os.environ.get("GROQ_API_KEY")
+    if key:
+        return key
+    try:
+        return st.secrets.get("GROQ_API_KEY")
+    except Exception:
+        # Streamlit may raise when no secrets file is configured.
+        return None
+
+
 st.set_page_config(page_title="Notebook LLM", page_icon="📚")
 st.title("📚 Notebook LLM")
-st.write("Upload a PDF to find relevant passages using semantic search.")
+st.write("Upload a PDF and ask questions about its contents.")
 
 uploaded_file = st.file_uploader("Choose a PDF", type=["pdf"])
 
 if uploaded_file is None:
     st.session_state.pop("search_state", None)
+    st.session_state.pop("answer_state", None)
     st.info("Upload a PDF to begin.")
 else:
     pdf_bytes = uploaded_file.getvalue()
@@ -33,12 +55,14 @@ else:
     st.write(f"File name: {uploaded_file.name}")
     st.write(f"File size: {uploaded_file.size / 1024:.1f} KB")
 
-    # Never reuse search results from a different uploaded document.
+    # Avoid reusing answers or search results for a different PDF.
     if st.session_state.get("search_state", {}).get("fingerprint") != fingerprint:
         st.session_state.pop("search_state", None)
+        st.session_state.pop("answer_state", None)
 
     if st.button("Process document", type="primary"):
         st.session_state.pop("search_state", None)
+        st.session_state.pop("answer_state", None)
         try:
             page_count, text = extract_pdf_text(pdf_bytes)
         except (PdfReadError, ValueError, OSError) as exc:
@@ -75,9 +99,10 @@ else:
             st.text_area("Text preview", value=state["preview"], height=240)
 
         with st.form("document_search"):
-            question = st.text_input("Search your document", placeholder="What does this document say about...?")
-            submitted = st.form_submit_button("Find relevant passages")
+            question = st.text_input("Ask your document", placeholder="What does this document say about...?")
+            submitted = st.form_submit_button("Ask question")
         if submitted:
+            st.session_state.pop("answer_state", None)
             if not question.strip():
                 st.warning("Enter a question to search the document.")
             else:
@@ -90,7 +115,37 @@ else:
                     except Exception:
                         st.error("Search failed. Please try again.")
                     else:
-                        st.subheader("Relevant passages")
-                        for number, (passage, similarity) in enumerate(results, start=1):
-                            st.caption(f"Match {number} · cosine similarity {similarity:.3f}")
-                            st.text(passage)
+                        answer = None
+                        error = None
+                        api_key = get_api_key()
+                        if api_key and results:
+                            with st.spinner("Generating answer..."):
+                                try:
+                                    answer = answer_question(
+                                        question, results, get_answer_model(api_key)
+                                    )
+                                except Exception:
+                                    error = "Could not generate an answer. Please try again."
+                        st.session_state["answer_state"] = {
+                            "results": results,
+                            "answer": answer,
+                            "error": error,
+                            "has_api_key": bool(api_key),
+                        }
+
+        response = st.session_state.get("answer_state")
+        if response is not None:
+            if response["answer"]:
+                st.subheader("Answer")
+                st.write(response["answer"])
+            elif response["error"]:
+                st.error(response["error"])
+            elif not response["has_api_key"]:
+                st.info("Set GROQ_API_KEY to enable AI answers. Search results are available below.")
+            else:
+                st.info("No relevant passages were found.")
+
+            st.subheader("Relevant passages")
+            for number, (passage, similarity) in enumerate(response["results"], start=1):
+                st.caption(f"Match {number} · cosine similarity {similarity:.3f}")
+                st.text(passage)
