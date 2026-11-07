@@ -1,26 +1,26 @@
 # Notebook LLM
 
-A Python application for uploading PDF documents and searching their contents by semantic similarity.
+A Python application for uploading PDF documents, searching their contents, and generating document-grounded answers.
 
 ## Tech stack
 
-- Python
-- Streamlit
+- Python and Streamlit
 - PyPDF
-- LangChain
+- LangChain and HuggingFace embeddings
 - FAISS
-- HuggingFace embeddings
+- Groq
 
-## Current features
+## Features
 
-- PDF upload interface with file metadata
-- PDF text extraction and preview
-- Overlapping text chunks for downstream retrieval
-- Text embeddings generated with the all-MiniLM-L6-v2 model
-- In-memory FAISS similarity search for the top three relevant passages
-- Input validation and automated tests for text processing and retrieval
+- PDF upload with file metadata and text extraction
+- Overlapping text chunks and MiniLM text embeddings
+- In-memory FAISS similarity search over document passages
+- Question answering grounded in the three most relevant retrieved passages
+- Numbered source passages shown alongside generated answers
+- Search-only mode when no Groq API key is configured
+- Automated tests for text preparation, retrieval, and answer generation
 
-Generated answers using an LLM are not yet implemented. Scanned PDFs without selectable text require OCR.
+Scanned PDFs without selectable text require OCR. Generated answers should be checked against the displayed source passages.
 
 ## Setup
 
@@ -30,7 +30,13 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The first document processing run may download the embedding model. An internet connection is required for that initial download.
+Set `GROQ_API_KEY` as an environment variable, or in a local `.streamlit/secrets.toml` file (ignored by Git):
+
+```toml
+GROQ_API_KEY = "your_api_key_here"
+```
+
+The first document processing run may download the embedding model. An internet connection is required for that initial download and for Groq API calls.
 
 ## Run tests
 
@@ -38,6 +44,4 @@ The first document processing run may download the embedding model. An internet 
 python -m unittest discover -s tests -v
 ```
 
-The FAISS retrieval unit tests use a lightweight index double; verify the installed native FAISS integration when deploying.
-
-Never commit API keys or local secrets.
+The FAISS retrieval unit tests use a lightweight index double; verify the installed native FAISS integration when deploying. Never commit API keys or local secrets.
