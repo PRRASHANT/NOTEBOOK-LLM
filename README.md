@@ -17,8 +17,12 @@ A Python application for uploading PDF documents, searching their contents, and 
 - In-memory FAISS similarity search over document passages
 - Question answering grounded in the three most relevant retrieved passages
 - Numbered source passages shown alongside generated answers
+- Multi-turn question and answer history for the active PDF, with a clear-conversation control
+- Recent conversation context supplied to the answer model for follow-up questions
 - Search-only mode when no Groq API key is configured
 - Automated tests for text preparation, retrieval, and answer generation
+
+Follow-up retrieval still searches using the latest question, so ambiguous follow-ups may require a more specific question. Conversation history is cleared when the PDF is changed or reprocessed.
 
 Scanned PDFs without selectable text require OCR. Generated answers should be checked against the displayed source passages.
 
