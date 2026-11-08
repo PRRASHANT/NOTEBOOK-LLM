@@ -47,7 +47,7 @@ uploaded_file = st.file_uploader("Choose a PDF", type=["pdf"])
 
 if uploaded_file is None:
     st.session_state.pop("search_state", None)
-    st.session_state.pop("answer_state", None)
+    st.session_state.pop("chat_turns", None)
     st.info("Upload a PDF to begin.")
 else:
     pdf_bytes = uploaded_file.getvalue()
@@ -55,14 +55,14 @@ else:
     st.write(f"File name: {uploaded_file.name}")
     st.write(f"File size: {uploaded_file.size / 1024:.1f} KB")
 
-    # Avoid reusing answers or search results for a different PDF.
+    # Never reuse indexed content or chat turns after a document change.
     if st.session_state.get("search_state", {}).get("fingerprint") != fingerprint:
         st.session_state.pop("search_state", None)
-        st.session_state.pop("answer_state", None)
+        st.session_state.pop("chat_turns", None)
 
     if st.button("Process document", type="primary"):
         st.session_state.pop("search_state", None)
-        st.session_state.pop("answer_state", None)
+        st.session_state.pop("chat_turns", None)
         try:
             page_count, text = extract_pdf_text(pdf_bytes)
         except (PdfReadError, ValueError, OSError) as exc:
@@ -98,11 +98,14 @@ else:
         with st.expander("Preview extracted text"):
             st.text_area("Text preview", value=state["preview"], height=240)
 
+        turns = st.session_state.setdefault("chat_turns", [])
+        if turns and st.button("Clear conversation"):
+            turns.clear()
+
         with st.form("document_search"):
             question = st.text_input("Ask your document", placeholder="What does this document say about...?")
             submitted = st.form_submit_button("Ask question")
         if submitted:
-            st.session_state.pop("answer_state", None)
             if not question.strip():
                 st.warning("Enter a question to search the document.")
             else:
@@ -119,33 +122,40 @@ else:
                         error = None
                         api_key = get_api_key()
                         if api_key and results:
+                            history = [
+                                (turn["question"], turn["answer"])
+                                for turn in turns if turn["answer"]
+                            ]
                             with st.spinner("Generating answer..."):
                                 try:
                                     answer = answer_question(
-                                        question, results, get_answer_model(api_key)
+                                        question, results, get_answer_model(api_key),
+                                        history=history,
                                     )
                                 except Exception:
                                     error = "Could not generate an answer. Please try again."
-                        st.session_state["answer_state"] = {
+                        turns.append({
+                            "question": question.strip(),
                             "results": results,
                             "answer": answer,
                             "error": error,
                             "has_api_key": bool(api_key),
-                        }
+                        })
 
-        response = st.session_state.get("answer_state")
-        if response is not None:
-            if response["answer"]:
-                st.subheader("Answer")
-                st.write(response["answer"])
-            elif response["error"]:
-                st.error(response["error"])
-            elif not response["has_api_key"]:
-                st.info("Set GROQ_API_KEY to enable AI answers. Search results are available below.")
-            else:
-                st.info("No relevant passages were found.")
+        for turn in turns:
+            with st.chat_message("user"):
+                st.write(turn["question"])
+            with st.chat_message("assistant"):
+                if turn["answer"]:
+                    st.markdown(turn["answer"])
+                elif turn["error"]:
+                    st.error(turn["error"])
+                elif not turn["has_api_key"]:
+                    st.info("Set GROQ_API_KEY to enable AI answers. Search results are available below.")
+                else:
+                    st.info("No relevant passages were found.")
 
-            st.subheader("Relevant passages")
-            for number, (passage, similarity) in enumerate(response["results"], start=1):
-                st.caption(f"Match {number} · cosine similarity {similarity:.3f}")
-                st.text(passage)
+                with st.expander("Relevant passages"):
+                    for number, (passage, similarity) in enumerate(turn["results"], start=1):
+                        st.caption(f"Match {number} · cosine similarity {similarity:.3f}")
+                        st.text(passage)
