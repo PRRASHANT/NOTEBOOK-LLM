@@ -74,7 +74,7 @@ class AnswerQuestionTests(unittest.TestCase):
         self.assertIn("NOT evidence", system)
         self.assertIn("Previous question: What is RAG?", user)
         self.assertIn("Previous answer: It combines retrieval", user)
-        self.assertIn("Document excerpts:\\n[1] The approach has limits.", user)
+        self.assertIn("Document excerpts:\n[1] The approach has limits.", user)
 
     def test_only_last_three_history_turns_are_sent(self):
         model = FakeChatModel()
