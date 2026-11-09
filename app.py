@@ -11,6 +11,7 @@ from pypdf.errors import PdfReadError
 from answer_utils import answer_question
 from embedding_utils import MODEL_NAME, embed_chunks
 from pdf_utils import extract_pdf_text
+from retrieval_utils import build_retrieval_query
 from search_utils import build_search_index, search_chunks
 from text_utils import chunk_text
 
@@ -111,8 +112,11 @@ else:
             else:
                 with st.spinner("Searching document..."):
                     try:
+                        retrieval_query = build_retrieval_query(
+                            question, [turn["question"] for turn in turns],
+                        )
                         results = search_chunks(
-                            state["index"], state["chunks"], question,
+                            state["index"], state["chunks"], retrieval_query,
                             get_embedding_model(), k=3,
                         )
                     except Exception:
