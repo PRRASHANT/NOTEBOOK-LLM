@@ -49,4 +49,4 @@ The first document processing run may download the embedding model. An internet 
 python -m unittest discover -s tests -v
 ```
 
-The FAISS retrieval unit tests use a lightweight index double; verify the installed native FAISS integration when deploying. Never commit API keys or local secrets.
+Unit tests use a lightweight FAISS index double. GitHub Actions also verifies native FAISS indexing and retrieval on Python 3.11. Never commit API keys or local secrets.
