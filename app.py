@@ -9,11 +9,11 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from pypdf.errors import PdfReadError
 
 from answer_utils import answer_question
-from embedding_utils import MODEL_NAME, embed_chunks
+from document_utils import index_document
+from embedding_utils import MODEL_NAME
 from pdf_utils import extract_pdf_text
 from retrieval_utils import build_retrieval_query
-from search_utils import build_search_index, search_chunks
-from text_utils import chunk_text
+from search_utils import search_chunks
 
 
 @st.cache_resource(show_spinner=False)
@@ -72,12 +72,11 @@ else:
             if not text:
                 st.warning("No selectable text found. Scanned PDFs may require OCR.")
             else:
-                chunks = chunk_text(text)
                 with st.spinner("Generating embeddings and building search index..."):
                     try:
-                        model = get_embedding_model()
-                        vectors = embed_chunks(chunks, model)
-                        index = build_search_index(chunks, vectors)
+                        chunks, index, dimensions = index_document(
+                            text, get_embedding_model(),
+                        )
                     except Exception:
                         st.error("Could not index this PDF. Check dependencies and model access.")
                     else:
@@ -87,7 +86,7 @@ else:
                             "preview": text[:5000],
                             "characters": len(text),
                             "chunks": chunks,
-                            "dimensions": len(vectors[0]),
+                            "dimensions": dimensions,
                             "index": index,
                         }
 
