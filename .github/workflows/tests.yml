@@ -23,3 +23,15 @@ jobs:
           python -m compileall -q app.py answer_utils.py document_utils.py embedding_utils.py pdf_utils.py retrieval_utils.py search_utils.py text_utils.py
       - name: Run unit and native FAISS integration tests
         run: python -m unittest discover -s tests -v
+      - name: Smoke test Streamlit application startup
+        run: |
+          python - <<'PY'
+          from streamlit.testing.v1 import AppTest
+
+          app = AppTest.from_file("app.py").run(timeout=30)
+          if len(app.exception):
+              raise AssertionError(f"Streamlit startup failed: {app.exception}")
+          assert any("Notebook LLM" in title.value for title in app.title), "Missing application title"
+          assert any("Upload a PDF" in info.message for info in app.info), "Missing upload prompt"
+          print("Streamlit application startup smoke test passed")
+          PY
