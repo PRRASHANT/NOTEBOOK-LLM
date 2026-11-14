@@ -11,7 +11,7 @@ from pypdf.errors import PdfReadError
 from answer_utils import answer_question
 from document_utils import index_document
 from embedding_utils import MODEL_NAME
-from pdf_utils import extract_pdf_text
+from pdf_utils import extract_pdf_text, validate_pdf_size
 from retrieval_utils import build_retrieval_query
 from search_utils import search_chunks
 
@@ -51,6 +51,12 @@ if uploaded_file is None:
     st.session_state.pop("chat_turns", None)
     st.info("Upload a PDF to begin.")
 else:
+    try:
+        validate_pdf_size(uploaded_file.size)
+    except ValueError as exc:
+        st.error(str(exc))
+        st.stop()
+
     pdf_bytes = uploaded_file.getvalue()
     fingerprint = sha256(pdf_bytes).hexdigest()
     st.write(f"File name: {uploaded_file.name}")
