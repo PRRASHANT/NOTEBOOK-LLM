@@ -6,6 +6,7 @@ from pypdf import PdfReader
 
 MAX_PDF_BYTES = 20 * 1024 * 1024
 MAX_PDF_PAGES = 100
+MAX_EXTRACTED_CHARACTERS = 1_000_000
 
 
 def validate_pdf_size(size: int) -> None:
@@ -27,5 +28,16 @@ def extract_pdf_text(pdf_bytes: bytes) -> tuple[int, str]:
     if page_count > MAX_PDF_PAGES:
         raise ValueError(f"PDF exceeds the {MAX_PDF_PAGES}-page limit.")
 
-    pages = [page.extract_text() or "" for page in reader.pages]
-    return page_count, "\n\n".join(text.strip() for text in pages if text.strip())
+    pages = []
+    extracted_characters = 0
+    for page in reader.pages:
+        text = (page.extract_text() or "").strip()
+        if not text:
+            continue
+        # Account for separators so the final returned string stays bounded.
+        next_length = extracted_characters + len(text) + (2 if pages else 0)
+        if next_length > MAX_EXTRACTED_CHARACTERS:
+            raise ValueError("PDF exceeds the extracted-text character limit.")
+        pages.append(text)
+        extracted_characters = next_length
+    return page_count, "\n\n".join(pages)
