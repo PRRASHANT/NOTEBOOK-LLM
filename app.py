@@ -9,6 +9,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from pypdf.errors import PdfReadError
 
 from answer_utils import answer_question
+from conversation_utils import append_conversation_turn
 from document_utils import index_document
 from embedding_utils import MODEL_NAME
 from pdf_utils import extract_pdf_text, validate_pdf_size
@@ -143,7 +144,7 @@ else:
                                     )
                                 except Exception:
                                     error = "Could not generate an answer. Please try again."
-                        turns.append({
+                        append_conversation_turn(turns, {
                             "question": question.strip(),
                             "results": results,
                             "answer": answer,
