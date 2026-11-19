@@ -13,6 +13,7 @@ from conversation_utils import append_conversation_turn
 from document_utils import index_document
 from embedding_utils import MODEL_NAME
 from pdf_utils import extract_pdf_text, validate_pdf_size
+from question_utils import validate_question
 from retrieval_utils import build_retrieval_query
 from search_utils import search_chunks
 
@@ -113,8 +114,10 @@ else:
             question = st.text_input("Ask your document", placeholder="What does this document say about...?")
             submitted = st.form_submit_button("Ask question")
         if submitted:
-            if not question.strip():
-                st.warning("Enter a question to search the document.")
+            try:
+                question = validate_question(question)
+            except ValueError as exc:
+                st.warning(str(exc))
             else:
                 with st.spinner("Searching document..."):
                     try:
