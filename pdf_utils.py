@@ -17,9 +17,16 @@ def validate_pdf_size(size: int) -> None:
         raise ValueError("PDF exceeds the 20 MB upload limit.")
 
 
+def validate_pdf_header(pdf_bytes: bytes) -> None:
+    """Reject files without a PDF header in the first 1024 bytes."""
+    if b"%PDF-" not in pdf_bytes[:1024]:
+        raise ValueError("The uploaded file does not have a valid PDF header.")
+
+
 def extract_pdf_text(pdf_bytes: bytes) -> tuple[int, str]:
     """Return page count and selectable text from a PDF within resource limits."""
     validate_pdf_size(len(pdf_bytes))
+    validate_pdf_header(pdf_bytes)
     reader = PdfReader(BytesIO(pdf_bytes))
     if reader.is_encrypted:
         raise ValueError("Password-protected PDFs are not supported.")
