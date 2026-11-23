@@ -1,6 +1,7 @@
 """Utilities for reading text from uploaded PDF documents."""
 
 from io import BytesIO
+import re
 
 from pypdf import PdfReader
 
@@ -18,8 +19,8 @@ def validate_pdf_size(size: int) -> None:
 
 
 def validate_pdf_header(pdf_bytes: bytes) -> None:
-    """Reject files without a PDF header in the first 1024 bytes."""
-    if b"%PDF-" not in pdf_bytes[:1024]:
+    """Require a PDF version signature within the first 1024 bytes."""
+    if re.search(rb"%PDF-[12]\.[0-9](?![0-9])", pdf_bytes[:1024]) is None:
         raise ValueError("The uploaded file does not have a valid PDF header.")
 
 
