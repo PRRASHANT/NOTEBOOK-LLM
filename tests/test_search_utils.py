@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from search_utils import build_search_index, search_chunks
+from search_utils import MAX_SEARCH_RESULTS, build_search_index, search_chunks
 
 
 class FakeIndexFlatIP:
@@ -65,6 +65,12 @@ class SearchTests(unittest.TestCase):
     def test_k_larger_than_index_returns_available_chunks(self):
         index = build_search_index(self.chunks, self.vectors)
         self.assertEqual(len(search_chunks(index, self.chunks, "q", FakeEmbedder([1, 0]), k=99)), 3)
+
+    def test_caps_requested_results(self):
+        index = build_search_index(self.chunks, self.vectors)
+        with patch.object(index, "search", wraps=index.search) as search:
+            search_chunks(index, self.chunks, "q", FakeEmbedder([1, 0]), k=MAX_SEARCH_RESULTS + 50)
+        self.assertEqual(search.call_args.args[1], MAX_SEARCH_RESULTS)
 
     def test_rejects_invalid_index_inputs(self):
         cases = [([], []), (["a"], []), ([""], [[1]]),
