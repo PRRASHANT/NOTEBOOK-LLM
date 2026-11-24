@@ -6,6 +6,9 @@ from typing import Protocol
 import numpy as np
 
 
+MAX_SEARCH_RESULTS = 10
+
+
 class QueryEmbedder(Protocol):
     def embed_query(self, text: str) -> list[float]: ...
 
@@ -59,5 +62,6 @@ def search_chunks(index, chunks: Sequence[str], question: str,
         raise ValueError("Query embedding must have nonzero, finite magnitude.")
 
     query = np.ascontiguousarray((vector / length).reshape(1, -1))
-    scores, positions = index.search(query, min(k, len(chunks)))
+    requested_results = min(k, MAX_SEARCH_RESULTS)
+    scores, positions = index.search(query, min(requested_results, len(chunks)))
     return [(chunks[int(i)], float(score)) for i, score in zip(positions[0], scores[0]) if i >= 0]
