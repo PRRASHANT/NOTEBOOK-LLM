@@ -44,8 +44,8 @@ def search_chunks(index, chunks: Sequence[str], question: str,
     """Return the most relevant chunks with their cosine similarity scores."""
     if not isinstance(question, str) or not question.strip():
         raise ValueError("Search question must not be blank.")
-    if k < 1:
-        raise ValueError("k must be positive.")
+    if isinstance(k, bool) or not isinstance(k, int) or k < 1:
+        raise ValueError("k must be a positive integer.")
     if index.ntotal != len(chunks):
         raise ValueError("Index size does not match the number of chunks.")
     if not chunks:
