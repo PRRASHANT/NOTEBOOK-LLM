@@ -85,7 +85,8 @@ class SearchTests(unittest.TestCase):
         index = build_search_index(self.chunks, self.vectors)
         for question, vector, k in [("", [1, 0], 3), ("q", [1, 0], 0),
                                     ("q", [1], 3), ("q", [0, 0], 3),
-                                    ("q", [float("inf"), 0], 3)]:
+                                    ("q", [float("inf"), 0], 3),
+                                    ("q", [1, 0], 2.5), ("q", [1, 0], True)]:
             with self.subTest(question=question, vector=vector, k=k):
                 with self.assertRaises(ValueError):
                     search_chunks(index, self.chunks, question, FakeEmbedder(vector), k=k)
