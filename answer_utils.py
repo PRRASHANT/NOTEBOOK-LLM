@@ -1,11 +1,13 @@
 """Generate document-grounded answers from retrieved passages."""
 
+import re
 from collections.abc import Sequence
 from typing import Protocol
 
 
 NO_ANSWER = "I couldn't find that information in the uploaded document."
 MAX_HISTORY_TURNS = 3
+_CITATION_PATTERN = re.compile(r"\[(\d+)\]")
 
 
 class ChatModel(Protocol):
@@ -68,4 +70,15 @@ def answer_question(
     answer = getattr(response, "content", None)
     if not isinstance(answer, str) or not answer.strip():
         raise ValueError("The language model returned an empty or unsupported answer.")
-    return answer.strip()
+
+    answer = answer.strip()
+    invalid_citations = [
+        int(reference)
+        for reference in _CITATION_PATTERN.findall(answer)
+        if not 1 <= int(reference) <= len(passages)
+    ]
+    if invalid_citations:
+        raise ValueError(
+            "The language model returned a citation outside the retrieved passage range."
+        )
+    return answer

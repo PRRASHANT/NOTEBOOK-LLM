@@ -65,7 +65,6 @@ class AnswerQuestionTests(unittest.TestCase):
         self.assertEqual(answer_question("q", [("source", 0.5)],
                                          FakeChatModel("  Answer [1]\n")), "Answer [1]")
 
-
     def test_recent_history_is_included_but_not_treated_as_evidence(self):
         model = FakeChatModel()
         answer_question("What about its limitations?", [("The approach has limits.", 0.8)],
@@ -102,6 +101,29 @@ class AnswerQuestionTests(unittest.TestCase):
         self.assertIn("A" * 1500, prompt)
         self.assertNotIn("A" * 1501, prompt)
 
+    def test_rejects_citation_outside_retrieved_passages(self):
+        for output in ("Answer [0]", "Answer [2]", "Answer [1] and [3]"):
+            with self.subTest(output=output), self.assertRaisesRegex(
+                ValueError, "citation outside the retrieved passage range"
+            ):
+                answer_question(
+                    "question", [("only retrieved passage", 0.8)],
+                    FakeChatModel(output),
+                )
+
+    def test_accepts_all_valid_passage_citations(self):
+        answer = answer_question(
+            "question", [("first passage", 0.9), ("second passage", 0.8)],
+            FakeChatModel("Supported by [1] and [2]."),
+        )
+        self.assertEqual(answer, "Supported by [1] and [2].")
+
+    def test_non_numeric_markdown_links_are_not_treated_as_citations(self):
+        answer = answer_question(
+            "question", [("source", 0.5)],
+            FakeChatModel("See [the source](https://example.com)."),
+        )
+        self.assertEqual(answer, "See [the source](https://example.com).")
 
 
 if __name__ == "__main__":
