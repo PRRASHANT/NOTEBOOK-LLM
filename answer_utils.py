@@ -7,7 +7,8 @@ from typing import Protocol
 
 NO_ANSWER = "I couldn't find that information in the uploaded document."
 MAX_HISTORY_TURNS = 3
-_CITATION_PATTERN = re.compile(r"\[(\d+)\]")
+# Numeric Markdown links and image labels are not source citations.
+_CITATION_PATTERN = re.compile(r"(?<!!)\[(\d+)\](?!\()")
 
 
 class ChatModel(Protocol):
