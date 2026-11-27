@@ -86,8 +86,8 @@ class AnswerQuestionTests(unittest.TestCase):
             self.assertIn(f"Question {i}", prompt)
 
     def test_rejects_invalid_history(self):
-        for history in ([('valid', '')], [('valid', None)], [('missing answer',)],
-                        [(' ', 'answer')]):
+        for history in ([("valid", "")], [("valid", None)], [("missing answer",)],
+                        [(" ", "answer")]):
             with self.subTest(history=history), self.assertRaises(ValueError):
                 answer_question("Follow-up", [("source", 0.5)], FakeChatModel(), history)
 
@@ -124,6 +124,16 @@ class AnswerQuestionTests(unittest.TestCase):
             FakeChatModel("See [the source](https://example.com)."),
         )
         self.assertEqual(answer, "See [the source](https://example.com).")
+
+    def test_numeric_markdown_links_and_image_labels_are_not_citations(self):
+        output = (
+            "See [2024](https://example.com) and "
+            "![404](https://example.com/image.png). Source: [1]."
+        )
+        answer = answer_question(
+            "question", [("source", 0.5)], FakeChatModel(output)
+        )
+        self.assertEqual(answer, output)
 
 
 if __name__ == "__main__":
